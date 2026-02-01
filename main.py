@@ -197,5 +197,5 @@ async def start_dice(call: types.CallbackQuery):
 async def main():
     await dp.start_polling(bot)
 
-if __nams__ == "__main__":
+if __name__ == "__main__":
     asyncio.run(main())
