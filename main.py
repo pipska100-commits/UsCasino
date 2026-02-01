@@ -3,17 +3,18 @@ import random
 import hashlib
 import aiohttp
 import logging
+import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Настройка логирования, чтобы видеть ошибки в консоли
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
 # ================== CONFIG ==================
-# ЗАМЕНИ ЭТИ ЗНАЧЕНИЯ НА СВОИ ТОКЕНЫ
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CRYPTO_PAY_TOKEN = "ВАШ_КРИПТО_ТОКЕН"
+# Вставь сюда свой токен от CryptoPay
+CRYPTO_PAY_TOKEN = "ВАШ_КРИПТО_ТОКЕН" 
 CRYPTO_API_URL = "https://pay.crypt.bot/api"
 MIN_BET = 1.0
 # ============================================
@@ -83,12 +84,11 @@ async def back_to_start(call: types.CallbackQuery):
 
 @dp.callback_query(F.data == "deposit")
 async def deposit(call: types.CallbackQuery):
-    # Добавлен payload, чтобы бот знал, кому зачислять деньги
     inv = await crypto_api("createInvoice", {
         "asset": "USDT",
         "amount": "10.0",
         "description": "UsCasino Deposit",
-        "payload": str(call.from_user.id) 
+        "payload": str(call.from_user.id)
     })
     
     if inv.get("ok"):
@@ -100,59 +100,58 @@ async def deposit(call: types.CallbackQuery):
 async def check_invoices():
     while True:
         data = await crypto_api("getInvoices", {"status": "paid"})
-        if data.get("ok"):
+        if data and data.get("ok"):
             for inv in data["result"]["items"]:
                 inv_id = inv["invoice_id"]
                 if inv_id not in invoices_seen:
                     invoices_seen.add(inv_id)
-                    # Получаем ID пользователя из payload
                     uid_str = inv.get("payload")
                     if uid_str and uid_str.isdigit():
                         uid = int(uid_str)
                         u = get_user(uid)
                         u["balance"] += float(inv["amount"])
                         logging.info(f"Зачислено {inv['amount']} пользователю {uid}")
-    try:
-                            await bot.send_message(uid, f"✅ Баланс пополнен на {inv['amount']} USDT!")
-                        except:
-                            pass
-        await asyncio.sleep(10)
+                        try:
+                            await bot.send_message(uid, f"✅ Баланс пополнен на {inv['amount']} USDT!")
+                        except Exception as e:
+                            logging.error(f"Error sending success message: {e}")
+        await asyncio.sleep(10)
 
 # ================== GAMES ==================
 
 @dp.callback_query(F.data == "games")
 async def games(call: types.CallbackQuery):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎲 Dice", callback_data="dice_game")],
-        [InlineKeyboardButton(text="🏀 Basket", callback_data="basket")],
-        [InlineKeyboardButton(text="🎯 Darts", callback_data="darts")],
-        [InlineKeyboardButton(text="⚽ Football", callback_data="football")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="start_menu")]
-    ])
-    await call.message.edit_text("🎮 Выберите игру:", reply_markup=kb)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎲 Dice", callback_data="dice_game")],
+        [InlineKeyboardButton(text="🏀 Basket", callback_data="basket")],
+        [InlineKeyboardButton(text="🎯 Darts", callback_data="darts")],
+        [InlineKeyboardButton(text="⚽ Football", callback_data="football")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="start_menu")]
+    ])
+    await call.message.edit_text("🎮 Выберите игру:", reply_markup=kb)
 
 @dp.callback_query(F.data == "basket")
 async def basket(call: types.CallbackQuery): 
-    await bot.send_dice(call.from_user.id, emoji="🏀")
+    await bot.send_dice(call.from_user.id, emoji="🏀")
 
 @dp.callback_query(F.data == "darts")
 async def darts(call: types.CallbackQuery): 
-    await bot.send_dice(call.from_user.id, emoji="🎯")
+    await bot.send_dice(call.from_user.id, emoji="🎯")
 
 @dp.callback_query(F.data == "football")
 async def football(call: types.CallbackQuery): 
-    await bot.send_dice(call.from_user.id, emoji="⚽")
+    await bot.send_dice(call.from_user.id, emoji="⚽")
 
 # ================== RUN ==================
 
 async def main():
-    # Запуск фоновой задачи проверки платежей
-    asyncio.create_task(check_invoices())
-    # Запуск бота
-    await dp.start_polling(bot)
+    # Запуск фоновой задачи проверки платежей
+    asyncio.create_task(check_invoices())
+    # Запуск бота
+    await dp.start_polling(bot)
 
-if name == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logging.info("Бот остановлен")
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Бот остановлен")
