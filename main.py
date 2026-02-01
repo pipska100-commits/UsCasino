@@ -112,7 +112,7 @@ async def check_invoices():
                         u = get_user(uid)
                         u["balance"] += float(inv["amount"])
                         logging.info(f"Зачислено {inv['amount']} пользователю {uid}")
-                        try:
+                            try:
                             await bot.send_message(uid, f"✅ Баланс пополнен на {inv['amount']} USDT!")
                         except:
                             pass
